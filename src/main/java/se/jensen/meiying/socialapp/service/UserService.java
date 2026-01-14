@@ -97,7 +97,7 @@ public class UserService {
         }
 
         User user = userOptional.get();
-        user.getPosts().size(); // force fetch
+        user.getPosts().size();
         return user;
     }
 
