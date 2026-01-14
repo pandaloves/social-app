@@ -22,9 +22,6 @@ jobs:
       - name: Build with Maven
         run: mvn clean package
 
-      - name: Copy JAR to Docker context
-        run: cp target/social-app-api-1.0-SNAPSHOT.jar .
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -36,4 +33,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: mei188/rest-api-app:latest
+          tags: mei188/social-app-api:latest
