@@ -6,9 +6,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>se.jensen.meiying</groupId>
-    <artifactId>project3</artifactId>
+    <artifactId>social-app-api</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+
 
     <parent>
         <groupId>org.springframework.boot</groupId>
