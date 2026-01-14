@@ -28,9 +28,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Extract version from pom.xml
+        id: version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: mei188/social-app-api:latest
+          tags: |
+            mei188/social-app-api:latest
+            mei188/social-app-api:${{ steps.version.outputs.VERSION }}

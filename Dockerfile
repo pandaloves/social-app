@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk
+FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 COPY target/social-app-api.jar app.jar
 EXPOSE 8080
