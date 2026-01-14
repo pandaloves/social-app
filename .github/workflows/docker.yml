@@ -41,4 +41,3 @@ jobs:
           push: true
           tags: |
             mei188/social-app-api:latest
-            mei188/social-app-api:${{ steps.version.outputs.VERSION }}
