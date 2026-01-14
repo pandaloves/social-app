@@ -101,6 +101,7 @@
     </dependencies>
 
     <build>
+        <finalName>social-app-api</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
