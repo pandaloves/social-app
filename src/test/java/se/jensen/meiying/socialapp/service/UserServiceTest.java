@@ -10,6 +10,7 @@ import se.jensen.meiying.socialapp.dto.UserRegistrationDTO;
 import se.jensen.meiying.socialapp.logging.AppLogger;
 import se.jensen.meiying.socialapp.model.User;
 import se.jensen.meiying.socialapp.repository.UserRepository;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -36,7 +37,7 @@ class UserServiceTest {
         dto.setPassword("password");
 
         when(userRepository.existsByUsername("test")).thenReturn(false);
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(passwordEncoder.encode("password")).thenReturn("hashed_password");
 
         when(userRepository.save(any(User.class)))
                 .thenAnswer(invocation -> {
