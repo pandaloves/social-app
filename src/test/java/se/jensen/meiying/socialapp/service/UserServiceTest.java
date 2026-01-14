@@ -38,12 +38,21 @@ class UserServiceTest {
     void createUser_success() {
         UserRegistrationDTO dto = new UserRegistrationDTO();
         dto.setUsername("test");
+        dto.setPassword("password");
 
         when(userRepository.existsByUsername("test")).thenReturn(false);
         when(passwordEncoder.encode(any())).thenReturn("hashed");
 
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> {
+                    User u = invocation.getArgument(0);
+                    u.setId(1L);
+                    return u;
+                });
+
         User user = userService.createUser(dto);
 
         assertEquals("test", user.getUsername());
+        assertEquals(1L, user.getId());
     }
 }
