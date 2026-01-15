@@ -129,7 +129,7 @@ public class UserService {
         boolean matches = passwordEncoder.matches(rawPassword, userOptional.get().getPassword());
 
         if (matches) {
-            logger.info("Login successful for username: " + username);
+            logger.info("Login successfully for username: " + username);
         } else {
             logger.warn("Login failed – invalid password for username: " + username);
         }
