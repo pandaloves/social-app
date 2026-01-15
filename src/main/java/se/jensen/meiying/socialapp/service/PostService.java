@@ -29,6 +29,23 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
+    public Page<Post> getAllPosts(Pageable pageable) {
+        return postRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Post> getPostsByUserId(Long userId, Pageable pageable) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+        return postRepository.findByUser(user, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Post> getAllPosts() {
+        return postRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @Transactional(readOnly = true)
     public List<Post> searchPostsByContent(String keyword) {
         return postRepository.searchByContent(keyword);
     }

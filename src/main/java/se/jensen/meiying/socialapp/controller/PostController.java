@@ -12,6 +12,7 @@ import se.jensen.meiying.socialapp.model.Post;
 import se.jensen.meiying.socialapp.service.PostService;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @RestController
@@ -42,6 +43,23 @@ public class PostController {
         ));
     }
 
+    @GetMapping
+    public ResponseEntity<Page<PostResponseDto>> getPosts(
+            @RequestParam(required = false) Long userId,
+            @PageableDefault(page = 0, size = 10, sort = "createdAt,desc") Pageable pageable) {
+
+        Page<Post> page;
+        if (userId != null) {
+            page = postService.getPostsByUserId(userId, pageable);
+        } else {
+            // Get all posts
+            page = postService.getAllPosts(pageable);
+        }
+
+        Page<PostResponseDto> responsePage = page.map(DTOMapper::toPostResponseDto);
+        return ResponseEntity.ok(responsePage);
+    }
+
     @GetMapping("/user/{username}/wall")
     public ResponseEntity<PageResponseDTO<PostDTO>> getUserWall(
             @PathVariable String username,
@@ -65,23 +83,38 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PostDTO> getPostById(@PathVariable Long id) {
+    public ResponseEntity<PostResponseDto> getPostById(@PathVariable Long id) {
         Post post = postService.getPostById(id);
         return post == null
                 ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(DTOMapper.toPostDTO(post));
+                : ResponseEntity.ok(DTOMapper.toPostResponseDto(post));
     }
 
     @PostMapping
-    public ResponseEntity<PostDTO> createPost(@RequestBody CreatePostRequest request) {
-        Post post = postService.createPost(request.getUserId(), request.getContent());
-        return ResponseEntity.status(HttpStatus.CREATED).body(DTOMapper.toPostDTO(post));
+    public ResponseEntity<PostResponseDto> createPost(@RequestBody PostRequestDto requestDto) {
+        Post post = postService.createPost(requestDto.getUserId(), requestDto.getContent());
+        return ResponseEntity.status(HttpStatus.CREATED).body(DTOMapper.toPostResponseDto(post));
     }
 
-    static class CreatePostRequest {
-        private Long userId;
-        private String content;
-        public Long getUserId() { return userId; }
-        public String getContent() { return content; }
+    @PutMapping("/{id}")
+    public ResponseEntity<PostResponseDto> updatePost(
+            @PathVariable Long id,
+            @RequestBody PostRequestDto requestDto) {
+        try {
+            Post updatedPost = postService.updatePostContent(id, requestDto.getContent());
+            return ResponseEntity.ok(DTOMapper.toPostResponseDto(updatedPost));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+        boolean deleted = postService.deletePost(id);
+        return deleted
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }

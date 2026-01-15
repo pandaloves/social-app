@@ -93,4 +93,24 @@ public class DTOMapper {
         return dto;
     }
 
+    public static UserWithPostsResponseDto toUserWithPostsResponseDto(User user) {
+        UserWithPostsResponseDto dto = new UserWithPostsResponseDto();
+        dto.setUser(toUserDTO(user));
+
+        List<PostResponseDto> postDtos = user.getPosts().stream()
+                .map(DTOMapper::toPostResponseDto)
+                .collect(Collectors.toList());
+
+        dto.setPosts(postDtos);
+        return dto;
+    }
+
+    public static PostResponseDto toPostResponseDto(Post post) {
+        PostResponseDto dto = new PostResponseDto();
+        dto.setId(post.getId());
+        dto.setContent(post.getContent());
+        dto.setCreatedAt(post.getCreatedAt());
+        dto.setAuthor(toUserDTO(post.getUser()));
+        return dto;
+    }
 }
