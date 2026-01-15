@@ -131,25 +131,41 @@ public class UserController {
     }
 
     @GetMapping("/{id}/with-posts")
-    public ResponseEntity<User> getUserWithPosts(@PathVariable Long id) {
-        User user = userService.getUserWithPosts(id);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<UserWithPostsResponseDto> getUserWithPosts(@PathVariable("id") Long userId) {
+        User user = userService.getUserWithPosts(userId);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Post> sortedPosts = user.getPosts().stream()
+                .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()))
+                .collect(Collectors.toList());
+
+        user.setPosts(sortedPosts);
+
+        UserWithPostsResponseDto responseDto = DTOMapper.toUserWithPostsResponseDto(user);
+        return ResponseEntity.ok(responseDto);
     }
 
     @DeleteMapping("/{id}/with-posts")
     public ResponseEntity<Void> deleteUserWithPosts(@PathVariable Long id) {
-        userService.deleteUserWithAllPosts(id);
-        return ResponseEntity.noContent().build();
+        try {
+            userService.deleteUserWithAllPosts(id);
+            return ResponseEntity.noContent().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/{userId}/posts")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Post> createPostForUser(
+    public ResponseEntity<PostResponseDto> createPostForUser(
             @PathVariable Long userId,
-            @RequestBody String content) {
+            @RequestBody PostRequestDto requestDto) {
 
-        Post post = postService.createPost(userId, content);
-        return ResponseEntity.status(HttpStatus.CREATED).body(post);
+        Post post = postService.createPost(userId, requestDto.getContent());
+        PostResponseDto responseDto = DTOMapper.toPostResponseDto(post);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     @GetMapping("/{id}/friends")
