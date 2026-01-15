@@ -52,7 +52,6 @@ public class PostController {
         if (userId != null) {
             page = postService.getPostsByUserId(userId, pageable);
         } else {
-            // Get all posts
             page = postService.getAllPosts(pageable);
         }
 
