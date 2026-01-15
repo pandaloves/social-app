@@ -30,22 +30,22 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // In SecurityConfig.java
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ADD THIS LINE
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
                                 "/users/login",
-                                "/users/register",
+                                "/users/",
                                 "/users",
                                 "/users/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
                                 "/posts",
-                                "/posts/**",
-                                "/users/*/with-posts"
+                                "/posts/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
