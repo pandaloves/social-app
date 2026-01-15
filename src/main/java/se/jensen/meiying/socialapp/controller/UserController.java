@@ -158,7 +158,6 @@ public class UserController {
     }
 
     @PostMapping("/{userId}/posts")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PostResponseDto> createPostForUser(
             @PathVariable Long userId,
             @RequestBody PostRequestDto requestDto) {
