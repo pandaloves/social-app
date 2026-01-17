@@ -1,5 +1,6 @@
 package se.jensen.meiying.socialapp.service;
 
+import se.jensen.meiying.socialapp.logging.AppLogger;
 import se.jensen.meiying.socialapp.model.Post;
 import se.jensen.meiying.socialapp.model.User;
 import se.jensen.meiying.socialapp.repository.PostRepository;
@@ -17,15 +18,22 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final AppLogger logger;
 
-    public PostService(PostRepository postRepository, UserRepository userRepository) {
+    public PostService(PostRepository postRepository, UserRepository userRepository, AppLogger logger) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
+        this.logger = logger;
     }
 
     @Transactional(readOnly = true)
     public Post getPostById(Long id) {
-        return postRepository.findByIdWithComments(id);
+        Post post = postRepository.findByIdWithComments(id);
+        if (post == null) {
+            throw new NoSuchElementException("Post not found");
+        }
+        logger.info("Fetched post.");
+        return post;
     }
 
     @Transactional(readOnly = true)
