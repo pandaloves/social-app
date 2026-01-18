@@ -11,16 +11,32 @@ import se.jensen.meiying.socialapp.service.CommentService;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * REST controller for managing comments on posts.
+ * Provides endpoints to create and retrieve comments for a given post.
+ */
 @RestController
 @RequestMapping("/posts/{postId}/comments")
 public class CommentController {
 
     private final CommentService commentService;
 
+    /**
+     * Constructor to inject CommentService.
+     *
+     * @param commentService the service handling comment operations
+     */
     public CommentController(CommentService commentService) {
         this.commentService = commentService;
     }
 
+    /**
+     * Creates a new comment for a specific post.
+     *
+     * @param postId     the ID of the post to comment on
+     * @param requestDto the DTO containing user ID and comment text
+     * @return the created comment wrapped in ResponseEntity
+     */
     @PostMapping
     public ResponseEntity<CommentResponseDto> createComment(
             @PathVariable Long postId,
@@ -36,6 +52,12 @@ public class CommentController {
                 .body(DTOMapper.toCommentResponseDto(comment));
     }
 
+    /**
+     * Retrieves all comments for a specific post.
+     *
+     * @param postId the ID of the post
+     * @return list of CommentResponseDto wrapped in ResponseEntity
+     */
     @GetMapping
     public ResponseEntity<List<CommentResponseDto>> getCommentsForPost(
             @PathVariable Long postId) {

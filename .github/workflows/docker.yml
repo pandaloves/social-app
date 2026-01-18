@@ -1,41 +1,62 @@
+# ==========================
+# GitHub Actions Workflow
+# ==========================
+# Workflow som bygger och pushar Docker-image vid push till main-branch
 name: Build and Push Docker Image
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger workflow vid push till main
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Kör jobben på senaste Ubuntu
 
     steps:
+      # ==========================
+      # Checkout code
+      # ==========================
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # Ladda ner repository-koden
 
-      # 2️⃣ Set up Java 17
+      # ==========================
+      # Set up Java
+      # ==========================
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: temurin  # Använder Temurin JDK
+          java-version: 17      # Sätter Java-version 17
 
+      # ==========================
+      # Build project
+      # ==========================
       - name: Build with Maven
-        run: mvn clean package
+        run: mvn clean package  # Bygger projektet med Maven
 
+      # ==========================
+      # Copy JAR
+      # ==========================
       - name: Copy JAR to Docker context
-        run: cp target/social-app-api-1.0-SNAPSHOT.jar .
+        run: cp target/social-app-api-1.0-SNAPSHOT.jar .  # Kopierar byggd JAR till Docker-context
 
+      # ==========================
+      # Docker Hub login
+      # ==========================
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub-användarnamn från secrets
+          password: ${{ secrets.DOCKER_TOKEN }}     # Docker Hub-token från secrets
 
+      # ==========================
+      # Build and push Docker image
+      # ==========================
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: mei188/social-app-api:latest
+          context: .                   # Docker build context
+          file: Dockerfile             # Dockerfile att använda
+          push: true                   # Push image till Docker Hub
+          tags: mei188/social-app-api:latest  # Tag för Docker-image
