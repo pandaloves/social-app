@@ -14,6 +14,7 @@ import se.jensen.meiying.socialapp.repository.UserRepository;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
@@ -41,8 +42,9 @@ class PostServiceTest {
     /**
      * Testar skapandet av ett nytt inlägg för en användare.
      * <p>
-     * Metoden mockar användarhämtning via {@link UserRepository} och verifierar att
-     * det skapade {@link Post}-objektet får korrekt innehåll och associerad användare.
+     * Mockar användarhämtning via {@link UserRepository} och
+     * {@link PostRepository#save(Post)} för att returnera post-objektet.
+     * Verifierar att det skapade {@link Post}-objektet får korrekt innehåll och associerad användare.
      * </p>
      */
     @Test
@@ -52,6 +54,10 @@ class PostServiceTest {
 
         // Mockar att användaren finns
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // Mockar att postRepository.save returnerar samma post som den får
+        when(postRepository.save(any(Post.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Skapar post
         Post post = postService.createPost(1L, "Hello World");
