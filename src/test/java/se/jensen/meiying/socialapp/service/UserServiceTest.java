@@ -15,6 +15,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+/**
+ * {@link UserServiceTest} innehåller enhetstester för {@link UserService}.
+ * <p>
+ * Klassen använder Mockito för att mocka beroenden och verifiera beteendet hos
+ * {@link UserService} utan att behöva ansluta till en riktig databas.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
@@ -30,24 +37,37 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    /**
+     * Testar skapandet av en ny användare via {@link UserService#createUser(UserRegistrationDTO)}.
+     * <p>
+     * Metoden mockar kontroll av om användarnamn finns, lösenordskodning och sparande av {@link User}-entitet.
+     * Testet verifierar att det skapade {@link User}-objektet har korrekt användarnamn och genererat ID.
+     * </p>
+     */
     @Test
     void createUser_success() {
         UserRegistrationDTO dto = new UserRegistrationDTO();
         dto.setUsername("test");
         dto.setPassword("password");
 
+        // Mockar att användarnamn inte redan finns
         when(userRepository.existsByUsername("test")).thenReturn(false);
+
+        // Mockar lösenordskodning
         when(passwordEncoder.encode("password")).thenReturn("hashed_password");
 
+        // Mockar sparande av användare
         when(userRepository.save(any(User.class)))
                 .thenAnswer(invocation -> {
                     User u = invocation.getArgument(0);
-                    u.setId(1L);
+                    u.setId(1L); // simulerar genererat ID
                     return u;
                 });
 
+        // Skapar användare
         User user = userService.createUser(dto);
 
+        // Verifierar attribut
         assertEquals("test", user.getUsername());
         assertEquals(1L, user.getId());
     }

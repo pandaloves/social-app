@@ -1,17 +1,24 @@
 package se.jensen.meiying.socialapp.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
-import se.jensen.meiying.socialapp.logging.AppLogger;
-import se.jensen.meiying.socialapp.model.User;
-import se.jensen.meiying.socialapp.dto.UserRegistrationDTO;
-import se.jensen.meiying.socialapp.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.jensen.meiying.socialapp.dto.UserRegistrationDTO;
+import se.jensen.meiying.socialapp.logging.AppLogger;
+import se.jensen.meiying.socialapp.model.User;
+import se.jensen.meiying.socialapp.repository.UserRepository;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+/**
+ * {@link UserService} hanterar logik relaterad till {@link User}-entiteter.
+ * <p>
+ * Service-klassen ansvarar för skapande, uppdatering, borttagning, autentisering och hämtning av användare,
+ * samt hantering av användarens inlägg.
+ * </p>
+ */
 @Service
 public class UserService {
 
@@ -19,6 +26,13 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AppLogger logger;
 
+    /**
+     * Skapar en ny instans av {@link UserService}.
+     *
+     * @param userRepository  repository för att hantera {@link User}-entiteter.
+     * @param passwordEncoder {@link PasswordEncoder} för kryptering av lösenord.
+     * @param logger          logger för applikationsloggning.
+     */
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        AppLogger logger) {
@@ -27,6 +41,13 @@ public class UserService {
         this.logger = logger;
     }
 
+    /**
+     * Skapar en ny användare baserat på ett {@link UserRegistrationDTO}.
+     *
+     * @param registrationDTO DTO med registreringsdata.
+     * @return den skapade {@link User}-entiteten.
+     * @throws IllegalArgumentException om användarnamn eller email redan finns.
+     */
     @Transactional
     public User createUser(UserRegistrationDTO registrationDTO) {
         logger.info("Attempting to create user with username: " + registrationDTO.getUsername());
@@ -55,24 +76,47 @@ public class UserService {
         return savedUser;
     }
 
+    /**
+     * Hämtar alla användare.
+     *
+     * @return en lista med alla {@link User}-entiteter.
+     */
     @Transactional(readOnly = true)
     public List<User> findAllUsers() {
         logger.info("Fetching all users");
         return userRepository.findAll();
     }
 
+    /**
+     * Hämtar en användare baserat på ID.
+     *
+     * @param id ID för användaren.
+     * @return den hittade {@link User}-entiteten eller {@code null} om användaren inte finns.
+     */
     @Transactional(readOnly = true)
     public User findUserById(Long id) {
         logger.info("Fetching user by id: " + id);
         return userRepository.findById(id).orElse(null);
     }
 
+    /**
+     * Hämtar en användare baserat på användarnamn.
+     *
+     * @param username användarnamnet.
+     * @return en {@link Optional} med användaren om den finns.
+     */
     @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
         logger.info("Fetching user by username: " + username);
         return userRepository.findByUsername(username);
     }
 
+    /**
+     * Tar bort en användare baserat på ID.
+     *
+     * @param id ID för användaren som ska tas bort.
+     * @throws NoSuchElementException om användaren inte hittas.
+     */
     @Transactional
     public void deleteUser(Long id) {
         logger.info("Attempting to delete user with id: " + id);
@@ -86,6 +130,12 @@ public class UserService {
         logger.info("User deleted successfully with id: " + id);
     }
 
+    /**
+     * Hämtar en användare med alla inlägg.
+     *
+     * @param id ID för användaren.
+     * @return {@link User}-entiteten med posts initialiserade, eller {@code null} om användaren inte finns.
+     */
     @Transactional(readOnly = true)
     public User getUserWithPosts(Long id) {
         logger.info("Fetching user with posts, userId: " + id);
@@ -97,10 +147,16 @@ public class UserService {
         }
 
         User user = userOptional.get();
-        user.getPosts().size();
+        user.getPosts().size(); // initierar lazy-loaded posts
         return user;
     }
 
+    /**
+     * Tar bort en användare och alla dess inlägg.
+     *
+     * @param id ID för användaren.
+     * @throws NoSuchElementException om användaren inte hittas.
+     */
     @Transactional
     public void deleteUserWithAllPosts(Long id) {
         logger.info("Deleting user and all posts, userId: " + id);
@@ -115,6 +171,13 @@ public class UserService {
         logger.info("User and all posts deleted, userId: " + id);
     }
 
+    /**
+     * Autentiserar en användare baserat på användarnamn och lösenord.
+     *
+     * @param username    användarnamnet.
+     * @param rawPassword rålösenordet som ska verifieras.
+     * @return {@code true} om autentisering lyckades, annars {@code false}.
+     */
     @Transactional(readOnly = true)
     public boolean authenticateUser(String username, String rawPassword) {
         logger.info("Login attempt for username: " + username);
@@ -137,6 +200,14 @@ public class UserService {
         return matches;
     }
 
+    /**
+     * Uppdaterar en användares information baserat på {@link UserRegistrationDTO}.
+     *
+     * @param id        ID för användaren som ska uppdateras.
+     * @param updateDTO DTO med uppdaterad användardata.
+     * @return den uppdaterade {@link User}-entiteten.
+     * @throws NoSuchElementException om användaren inte hittas.
+     */
     @Transactional
     public User updateUser(Long id, UserRegistrationDTO updateDTO) {
         logger.info("Updating user with id: " + id);
