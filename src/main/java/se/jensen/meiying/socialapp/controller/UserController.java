@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.jensen.meiying.socialapp.dto.*;
+import se.jensen.meiying.socialapp.logging.AppLogger;
 import se.jensen.meiying.socialapp.model.Post;
 import se.jensen.meiying.socialapp.model.User;
 import se.jensen.meiying.socialapp.security.JwtUtil;
@@ -11,7 +12,9 @@ import se.jensen.meiying.socialapp.service.FriendshipService;
 import se.jensen.meiying.socialapp.service.PostService;
 import se.jensen.meiying.socialapp.service.UserService;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,7 @@ public class UserController {
     private final UserService userService;
     private final PostService postService;
     private final FriendshipService friendshipService;
+    private AppLogger logger;
     private final JwtUtil jwtUtil;
 
     /**
@@ -39,10 +43,12 @@ public class UserController {
     public UserController(UserService userService,
                           PostService postService,
                           FriendshipService friendshipService,
+                          AppLogger logger,
                           JwtUtil jwtUtil) {
         this.userService = userService;
         this.postService = postService;
         this.friendshipService = friendshipService;
+        this.logger = new AppLogger();
         this.jwtUtil = jwtUtil;
     }
 
@@ -168,14 +174,47 @@ public class UserController {
      * @return No content if deleted or NOT FOUND/ERROR status.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id,
+                                                          @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
+            // Optional: Add authorization check
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                if (jwtUtil.validateToken(token)) {
+                    String username = jwtUtil.getUsernameFromToken(token);
+                    User currentUser = userService.findByUsername(username).orElse(null);
+
+                    // Check if user is deleting themselves or is admin
+                    if (currentUser != null &&
+                            (currentUser.getId().equals(id) || "ADMIN".equals(currentUser.getRole()))) {
+                        userService.deleteUser(id);
+
+                        Map<String, String> response = new HashMap<>();
+                        response.put("message", "User deleted successfully");
+                        return ResponseEntity.ok(response);
+                    } else {
+                        Map<String, String> response = new HashMap<>();
+                        response.put("message", "Unauthorized: You can only delete your own account");
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                    }
+                }
+            }
+
+            // Fallback for testing or if no auth header
             userService.deleteUser(id);
-            return ResponseEntity.noContent().build();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "User deleted successfully");
+            return ResponseEntity.ok(response);
+
         } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "User not found with id: " + id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error deleting user with id: " + id, e);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Error deleting user: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
