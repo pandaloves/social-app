@@ -32,14 +32,6 @@ public class UserController {
     private AppLogger logger;
     private final JwtUtil jwtUtil;
 
-    /**
-     * Constructor for UserController.
-     *
-     * @param userService       Service for user-related operations.
-     * @param postService       Service for post-related operations.
-     * @param friendshipService Service for managing friendships.
-     * @param jwtUtil           Utility for JWT token generation and validation.
-     */
     public UserController(UserService userService,
                           PostService postService,
                           FriendshipService friendshipService,
@@ -52,12 +44,6 @@ public class UserController {
         this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * Authenticates a user and returns JWT tokens if successful.
-     *
-     * @param loginRequest The login credentials.
-     * @return JWT token, refresh token, and authentication status.
-     */
     @PostMapping("/login")
     public ResponseEntity<JwtResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
         boolean isAuthenticated = userService.authenticateUser(
@@ -75,12 +61,6 @@ public class UserController {
         return ResponseEntity.ok(new JwtResponseDTO(token, refreshToken, true));
     }
 
-    /**
-     * Refreshes JWT token using a valid refresh token.
-     *
-     * @param refreshToken The refresh token.
-     * @return New JWT token and refresh token if valid, UNAUTHORIZED otherwise.
-     */
     @PostMapping("/refresh-token")
     public ResponseEntity<JwtResponseDTO> refreshToken(@RequestParam String refreshToken) {
         if (!jwtUtil.validateToken(refreshToken)) {
@@ -94,12 +74,6 @@ public class UserController {
         return ResponseEntity.ok(new JwtResponseDTO(newToken, newRefreshToken, true));
     }
 
-    /**
-     * Creates a new user.
-     *
-     * @param registrationDTO The user registration data.
-     * @return The created user's DTO or error response.
-     */
     @PostMapping("/")
     public ResponseEntity<UserDTO> createUser(@RequestBody UserRegistrationDTO registrationDTO) {
         try {
@@ -113,11 +87,6 @@ public class UserController {
         }
     }
 
-    /**
-     * Retrieves all users.
-     *
-     * @return List of user DTOs.
-     */
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         List<User> users = userService.findAllUsers();
@@ -127,12 +96,6 @@ public class UserController {
         return ResponseEntity.ok(userDTOs);
     }
 
-    /**
-     * Retrieves a user by ID.
-     *
-     * @param id The user's ID.
-     * @return User DTO or NOT FOUND if user does not exist.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         User user = userService.findUserById(id);
@@ -143,13 +106,6 @@ public class UserController {
         return ResponseEntity.ok(userDTO);
     }
 
-    /**
-     * Updates a user's information.
-     *
-     * @param id        The user's ID.
-     * @param updateDTO Data to update.
-     * @return Updated user DTO or appropriate error response.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable Long id,
@@ -168,79 +124,75 @@ public class UserController {
     }
 
     /**
-     * Deletes a user by ID.
-     *
-     * @param id The user's ID.
-     * @return No content if deleted or NOT FOUND/ERROR status.
+     * SIMPLIFIED: Deletes a user by ID only - no authorization required
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id,
-                                                          @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         try {
-            // Optional: Add authorization check
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                if (jwtUtil.validateToken(token)) {
-                    String username = jwtUtil.getUsernameFromToken(token);
-                    User currentUser = userService.findByUsername(username).orElse(null);
+            logger.info("Deleting user with ID: " + id);
 
-                    // Check if user is deleting themselves or is admin
-                    if (currentUser != null &&
-                            (currentUser.getId().equals(id) || "ADMIN".equals(currentUser.getRole()))) {
-                        userService.deleteUser(id);
-
-                        Map<String, String> response = new HashMap<>();
-                        response.put("message", "User deleted successfully");
-                        return ResponseEntity.ok(response);
-                    } else {
-                        Map<String, String> response = new HashMap<>();
-                        response.put("message", "Unauthorized: You can only delete your own account");
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-                    }
-                }
-            }
-
-            // Fallback for testing or if no auth header
+            // Simply delete the user by ID
             userService.deleteUser(id);
+
             Map<String, String> response = new HashMap<>();
             response.put("message", "User deleted successfully");
+            response.put("userId", id.toString());
+
             return ResponseEntity.ok(response);
 
         } catch (NoSuchElementException e) {
+            logger.warn("User not found with ID: " + id);
+
             Map<String, String> response = new HashMap<>();
             response.put("message", "User not found with id: " + id);
+            response.put("error", "NOT_FOUND");
+
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
         } catch (Exception e) {
-            logger.error("Error deleting user with id: " + id, e);
+            logger.error("Error deleting user with ID: " + id, e);
+
             Map<String, String> response = new HashMap<>();
-            response.put("message", "Error deleting user: " + e.getMessage());
+            response.put("message", "Error deleting user");
+            response.put("error", e.getMessage());
+            response.put("userId", id.toString());
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    /**
-     * Deletes a user along with all their posts.
-     *
-     * @param id The user's ID.
-     * @return No content if deleted, NOT FOUND if user does not exist.
-     */
     @DeleteMapping("/{id}/with-posts")
-    public ResponseEntity<Void> deleteUserWithPosts(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> deleteUserWithPosts(@PathVariable Long id) {
         try {
             userService.deleteUserWithAllPosts(id);
-            return ResponseEntity.noContent().build();
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "User and all posts deleted successfully");
+            response.put("userId", id.toString());
+
+            return ResponseEntity.ok(response);
+
         } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
+            logger.warn("User not found for deletion with posts, ID: " + id);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "User not found with id: " + id);
+            response.put("error", "NOT_FOUND");
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+        } catch (Exception e) {
+            logger.error("Error deleting user with posts, ID: " + id, e);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Error deleting user with posts");
+            response.put("error", e.getMessage());
+            response.put("userId", id.toString());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    /**
-     * Creates a new post for a specific user.
-     *
-     * @param userId     The ID of the user creating the post.
-     * @param requestDto Post content.
-     * @return The created post DTO.
-     */
     @PostMapping("/{userId}/posts")
     public ResponseEntity<PostResponseDto> createPostForUser(
             @PathVariable Long userId,
@@ -251,12 +203,6 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
-    /**
-     * Retrieves accepted friends of a user.
-     *
-     * @param id The user's ID.
-     * @return List of friend user DTOs.
-     */
     @GetMapping("/{id}/friends")
     public ResponseEntity<List<UserDTO>> getFriends(@PathVariable Long id) {
 
