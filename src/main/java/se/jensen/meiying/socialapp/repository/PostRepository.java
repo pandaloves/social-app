@@ -3,6 +3,7 @@ package se.jensen.meiying.socialapp.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -69,7 +70,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * @param pageable The pagination information.
      * @return A page of posts authored by the specified user.
      */
+    List<Post> findByUser(User user);
+
     Page<Post> findByUser(User user, Pageable pageable);
+
+    @Modifying
+    @Query("DELETE FROM Post p WHERE p.user.id = :userId")
+    void deletePostsByUserId(@Param("userId") Long userId);
 
     /**
      * Retrieves a paginated list of posts authored by a user with the specified username,

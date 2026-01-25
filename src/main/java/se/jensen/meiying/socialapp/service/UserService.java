@@ -1,11 +1,19 @@
 package se.jensen.meiying.socialapp.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.jensen.meiying.socialapp.dto.UserRegistrationDTO;
 import se.jensen.meiying.socialapp.logging.AppLogger;
+import se.jensen.meiying.socialapp.model.Comment;
+import se.jensen.meiying.socialapp.model.Friendship;
+import se.jensen.meiying.socialapp.model.Post;
 import se.jensen.meiying.socialapp.model.User;
+import se.jensen.meiying.socialapp.repository.CommentRepository;
+import se.jensen.meiying.socialapp.repository.FriendshipRepository;
+import se.jensen.meiying.socialapp.repository.PostRepository;
 import se.jensen.meiying.socialapp.repository.UserRepository;
 
 import java.util.List;
@@ -25,6 +33,9 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AppLogger logger;
+    private final PostRepository postRepository;
+    private final CommentRepository commentRepository;
+    private final FriendshipRepository friendshipRepository;
 
     /**
      * Skapar en ny instans av {@link UserService}.
@@ -35,10 +46,16 @@ public class UserService {
      */
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       AppLogger logger) {
+                       AppLogger logger,
+                       PostRepository postRepository,
+                       CommentRepository commentRepository,
+                       FriendshipRepository friendshipRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.logger = logger;
+        this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
+        this.friendshipRepository = friendshipRepository;
     }
 
     /**
@@ -121,13 +138,118 @@ public class UserService {
     public void deleteUser(Long id) {
         logger.info("Attempting to delete user with id: " + id);
 
-        if (!userRepository.existsById(id)) {
-            logger.warn("Delete failed – user not found with id: " + id);
-            throw new NoSuchElementException("User not found");
-        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    logger.warn("Delete failed – user not found with id: " + id);
+                    return new NoSuchElementException("User not found");
+                });
 
-        userRepository.deleteById(id);
-        logger.info("User deleted successfully with id: " + id);
+        // Step 1: Delete user's comments
+        deleteUserComments(user);
+
+        // Step 2: Delete user's posts (and their comments)
+        deleteUserPosts(user);
+
+        // Step 3: Delete user's friendships (both as requester and addressee)
+        deleteUserFriendships(user);
+
+        // Step 4: Finally delete the user
+        userRepository.delete(user);
+
+        logger.info("User and all related data deleted successfully with id: " + id);
+    }
+
+
+    /**
+     * Deletes a user along with all their posts and friendships.
+     *
+     * @param id ID for the user to delete.
+     * @throws NoSuchElementException if user not found.
+     */
+    @Transactional
+    public void deleteUserWithAllPosts(Long id) {
+        logger.info("Deleting user and all posts, userId: " + id);
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    logger.warn("Delete with posts failed – user not found, userId: " + id);
+                    return new NoSuchElementException("User not found");
+                });
+
+        // Step 1: Delete user's comments
+        deleteUserComments(user);
+
+        // Step 2: Delete user's posts (and their comments)
+        deleteUserPosts(user);
+
+        // Step 3: Delete user's friendships (both as requester and addressee)
+        deleteUserFriendships(user);
+
+        // Step 4: Finally delete the user
+        userRepository.delete(user);
+
+        logger.info("User and all related data deleted successfully, userId: " + id);
+    }
+
+    /**
+     * Deletes all comments made by the user.
+     */
+    private void deleteUserComments(User user) {
+        try {
+            List<Comment> userComments = commentRepository.findByAuthor(user);
+            if (!userComments.isEmpty()) {
+                logger.info("Deleting " + userComments.size() + " comments by user " + user.getId());
+                commentRepository.deleteAll(userComments);
+            }
+        } catch (Exception e) {
+            logger.error("Error deleting user comments: " + e.getMessage());
+            throw new RuntimeException("Failed to delete user comments", e);
+        }
+    }
+
+    /**
+     * Deletes all posts by the user and their associated comments.
+     */
+    private void deleteUserPosts(User user) {
+        try {
+            // Get all posts by user
+            Page<Post> userPostsPage = postRepository.findByUser(user, Pageable.unpaged());
+            List<Post> userPosts = userPostsPage.getContent();
+
+            if (!userPosts.isEmpty()) {
+                logger.info("Deleting " + userPosts.size() + " posts by user " + user.getId());
+
+                // Delete comments for each post first
+                for (Post post : userPosts) {
+                    List<Comment> postComments = commentRepository.findByPost(post);
+                    if (!postComments.isEmpty()) {
+                        commentRepository.deleteAll(postComments);
+                    }
+                }
+
+                // Delete the posts
+                postRepository.deleteAll(userPosts);
+            }
+        } catch (Exception e) {
+            logger.error("Error deleting user posts: " + e.getMessage());
+            throw new RuntimeException("Failed to delete user posts", e);
+        }
+    }
+
+    /**
+     * Deletes all friendships where user is either requester or addressee.
+     */
+    private void deleteUserFriendships(User user) {
+        try {
+            List<Friendship> friendships = friendshipRepository.findByRequesterOrAddressee(user, user);
+            if (!friendships.isEmpty()) {
+                logger.info("Deleting " + friendships.size() + " friendships for user " + user.getId());
+                friendshipRepository.deleteAll(friendships);
+            }
+        } catch (Exception e) {
+            logger.error("Error deleting user friendships: " + e.getMessage());
+            throw new RuntimeException("Failed to delete user friendships", e);
+        }
     }
 
     /**
@@ -149,26 +271,6 @@ public class UserService {
         User user = userOptional.get();
         user.getPosts().size(); // initierar lazy-loaded posts
         return user;
-    }
-
-    /**
-     * Tar bort en användare och alla dess inlägg.
-     *
-     * @param id ID för användaren.
-     * @throws NoSuchElementException om användaren inte hittas.
-     */
-    @Transactional
-    public void deleteUserWithAllPosts(Long id) {
-        logger.info("Deleting user and all posts, userId: " + id);
-
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.warn("Delete with posts failed – user not found, userId: " + id);
-                    return new NoSuchElementException("User not found");
-                });
-
-        userRepository.delete(user);
-        logger.info("User and all posts deleted, userId: " + id);
     }
 
     /**
