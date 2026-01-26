@@ -12,7 +12,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -57,24 +56,36 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // Allowed origins – remove trailing slashes
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://cheap-maegan-hu168-4782dff7.koyeb.app/"
+                "https://cheap-maegan-hu168-4782dff7.koyeb.app"
         ));
 
-        configuration.setAllowedMethods(Arrays.asList(
+        // Allowed HTTP methods
+        configuration.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
 
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization", "Content-Type", "Accept", "X-Requested-With"
+        // Allowed headers sent by frontend
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With"
         ));
 
+        // Headers exposed to frontend
         configuration.setExposedHeaders(List.of("Authorization"));
+
+        // Allow sending cookies/auth headers
         configuration.setAllowCredentials(true);
+
+        // Cache preflight requests for 1 hour
         configuration.setMaxAge(3600L);
 
+        // Apply CORS config to all paths
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
