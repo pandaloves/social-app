@@ -59,7 +59,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://cheap-maegan-hu168-4782dff7.koyeb.app"
+                "https://social-application-fullstack.netlify.app"
         ));
 
         // Allowed HTTP methods
